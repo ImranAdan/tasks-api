@@ -15,7 +15,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: mandate
     permissions:
       actions: read
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ImranAdan/mandate
-          ref: b4ed6b51bfef10f836ffe2c8a196d7a9fb4ac59e
+          ref: 58c717221ed35beb8810ae11c26f252107d76841
           path: engine
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -62,6 +62,18 @@ jobs:
             echo "The app can reach the internet, so the seal failed"
             exit 1
           fi
+
+      # The model runs on this machine, so the intent never goes to a provider. The
+      # sealed app is on its own network and can't reach it.
+      - name: Start the Judge's model server
+        run: |
+          docker run --detach --name ollama --publish 127.0.0.1:11434:11434 \
+            --env OLLAMA_CONTEXT_LENGTH=16384 \
+            ollama/ollama:0.40.14@sha256:ebaef4f4c5d93660e1f25f8ad085a112f51ccfb0e8458073e71793959dba91c9
+          for _ in $(seq 1 30); do
+            curl --silent --fail --output /dev/null http://127.0.0.1:11434/api/version && break
+            sleep 1
+          done
 
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: intent

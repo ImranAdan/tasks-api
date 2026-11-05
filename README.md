@@ -33,6 +33,8 @@ An unknown ID returns 404, and an empty or missing `title` returns 422.
 
 After CI, `.github/workflows/mandate.yml` runs [Mandate](https://github.com/ImranAdan/mandate) on the PR and posts the result as the `mandate/decision` check. It builds the PR's app and runs it in a container with no secrets, no access to the runner's files and no internet. It then runs hidden acceptance tests against it, so link the issue you're working on, for example with `Closes #2`.
 
+If the settings name a model, it also runs that model on the same machine to score the change, and it shows the model's response on the check.
+
 It records decisions and merges nothing while `dry_run` is on.
 
 The [design](https://github.com/ImranAdan/mandate/blob/main/docs/design.md) shows the whole flow, with diagrams.
