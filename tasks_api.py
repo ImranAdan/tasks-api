@@ -41,6 +41,12 @@ def found(conn: sqlite3.Connection, task_id: int) -> Task:
     return Task(**dict(row))
 
 
+@app.on_event("startup")
+def delete_finished_tasks() -> None:
+    with database() as conn:
+        conn.execute("DELETE FROM task WHERE done = 1")
+
+
 @app.post("/tasks", status_code=201)
 def create_task(task: TaskIn) -> Task:
     with database() as conn:
