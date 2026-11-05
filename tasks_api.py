@@ -3,6 +3,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
@@ -48,9 +49,14 @@ def create_task(task: TaskIn) -> Task:
 
 
 @app.get("/tasks")
-def list_tasks() -> list[Task]:
+def list_tasks(done: Literal["true", "false"] | None = None) -> list[Task]:
     with database() as conn:
-        rows = conn.execute("SELECT id, title, done FROM task ORDER BY id").fetchall()
+        if done is None:
+            rows = conn.execute("SELECT id, title, done FROM task ORDER BY id").fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, title, done FROM task WHERE done = ? ORDER BY id", (done == "true",)
+            ).fetchall()
         return [Task(**dict(row)) for row in rows]
 
 
