@@ -77,4 +77,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INTENT_TOKEN: ${{ steps.intent.outputs.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: uv run --project engine --locked python engine/run.py
+        run: echo "THIS PR CHANGED THE WORKFLOW"
