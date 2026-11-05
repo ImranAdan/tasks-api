@@ -1,0 +1,80 @@
+name: Mandate
+
+# Decides each pull request after CI. It runs main's copy of this file, so a pull
+# request can't change it, and it merges nothing while dry_run is true.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  decide:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: mandate
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: trusted
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: pr
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ImranAdan/mandate
+          ref: e264174586ffac826eca9d24afafebfa1d699726
+          path: engine
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      # This runs before any token exists and before the private tests are fetched.
+      - name: Start the pull request's app, sealed off
+        run: |
+          docker build --quiet --tag pr-app --file trusted/.github/mandate/app.Dockerfile pr
+          rm -rf pr
+          docker network create --internal sealed
+          docker run --detach --name app --network sealed --read-only --tmpfs /tmp \
+            --cap-drop ALL --security-opt no-new-privileges --memory 512m --pids-limit 256 \
+            --env TASKS_DB=/tmp/tasks.db pr-app
+          ip=$(docker inspect --format '{{.NetworkSettings.Networks.sealed.IPAddress}}' app)
+          echo "BASE_URL=http://$ip:8000" >> "$GITHUB_ENV"
+          for _ in $(seq 1 30); do
+            curl --silent --fail --output /dev/null "http://$ip:8000/tasks" && break
+            sleep 1
+          done
+          if docker exec app python -c "import urllib.request as u; u.urlopen('https://github.com', timeout=5)" 2>/dev/null; then
+            echo "The app can reach the internet, so the seal failed"
+            exit 1
+          fi
+
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: intent
+        with:
+          app-id: ${{ secrets.INTENT_READER_APP_ID }}
+          private-key: ${{ secrets.INTENT_READER_PRIVATE_KEY }}
+          owner: ImranAdan
+          repositories: mandate-intent
+          permission-contents: read
+
+      - name: Decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INTENT_TOKEN: ${{ steps.intent.outputs.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: uv run --project engine --locked python engine/run.py
