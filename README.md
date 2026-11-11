@@ -22,7 +22,7 @@ uv run pytest
 | Method and path | Does | Success |
 |---|---|---|
 | `POST /tasks` | Create a task from `title` and optional `done` | 201 |
-| `GET /tasks` | List tasks by ID, or only finished or open ones with `done=true` or `done=false` | 200 |
+| `GET /tasks` | List tasks by ID, or only finished or open ones with `done=true` or `done=false`. `title=milk` keeps only tasks whose title contains "milk", ignoring case | 200 |
 | `GET /tasks/{id}` | Read a task | 200 |
 | `PUT /tasks/{id}` | Replace a task's `title` and `done` | 200 |
 | `DELETE /tasks/{id}` | Delete a task | 204 |

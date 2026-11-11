@@ -49,15 +49,18 @@ def create_task(task: TaskIn) -> Task:
 
 
 @app.get("/tasks")
-def list_tasks(done: Literal["true", "false"] | None = None) -> list[Task]:
+def list_tasks(done: Literal["true", "false"] | None = None, title: str | None = None) -> list[Task]:
+    """Every task, or only those matching the filters. A title search ignores case and has no wildcards."""
+    where, params = [], []
+    if done is not None:
+        where.append("done = ?")
+        params.append(done == "true")
+    if title is not None:
+        where.append("instr(lower(title), lower(?)) > 0")
+        params.append(title)
+    query = "SELECT id, title, done FROM task" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY id"
     with database() as conn:
-        if done is None:
-            rows = conn.execute("SELECT id, title, done FROM task ORDER BY id").fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, title, done FROM task WHERE done = ? ORDER BY id", (done == "true",)
-            ).fetchall()
-        return [Task(**dict(row)) for row in rows]
+        return [Task(**dict(row)) for row in conn.execute(query, params).fetchall()]
 
 
 @app.get("/tasks/{task_id}")
