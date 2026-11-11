@@ -9,6 +9,11 @@ on:
 
 permissions: {}
 
+# One decision at a time per PR branch, so an older run can't overwrite a newer
+# comment and two runs can't both create one.
+concurrency:
+  group: mandate-${{ github.event.workflow_run.head_branch }}
+
 jobs:
   decide:
     if: >-
@@ -21,7 +26,7 @@ jobs:
       actions: read
       checks: write
       contents: write
-      issues: read
+      issues: write
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,7 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ImranAdan/mandate
-          ref: db65038530e508224c838c12cf72a042cf9c95d6
+          ref: 9797266104c7010fb858a34643d69b6b35c1f736
           path: engine
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3

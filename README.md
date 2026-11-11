@@ -35,6 +35,6 @@ After CI, `.github/workflows/mandate.yml` runs [Mandate](https://github.com/Imra
 
 If the settings name a model, it also asks that model to score the change, and it shows the model's response on the check. A `claude-*` model runs on Anthropic's API; any other runs on the same machine.
 
-It records decisions and merges nothing while `dry_run` is on. With `dry_run` off, it merges the exact commit it authorized.
+It records decisions and merges nothing while `dry_run` is on. With `dry_run` off, it merges the exact commit it authorized. It also posts the decision as one comment on the PR, kept updated, and after a merge it closes the linked issue.
 
 The [design](https://github.com/ImranAdan/mandate/blob/main/docs/design.md) shows the whole flow, with diagrams.
