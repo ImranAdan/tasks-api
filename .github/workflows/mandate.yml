@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ImranAdan/mandate
-          ref: 517af85439e97d6d363f69871c27d6b3ef8167d5
+          ref: 8d14c6db3cabf3aae4d475b2e90f4a322d4cdfe9
           path: engine
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -63,8 +63,9 @@ jobs:
             exit 1
           fi
 
-      # The model runs on this machine, so the intent never goes to a provider. The
-      # sealed app is on its own network and can't reach it.
+      # A local model runs on this machine, so the intent never goes to a provider. A
+      # claude-* judge_model goes to Anthropic instead, with ANTHROPIC_API_KEY. The
+      # sealed app is on its own network and can't reach either.
       - name: Start the Judge's model server
         run: |
           docker run --detach --name ollama --publish 127.0.0.1:11434:11434 \
@@ -88,5 +89,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INTENT_TOKEN: ${{ steps.intent.outputs.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: uv run --project engine --locked python engine/run.py
