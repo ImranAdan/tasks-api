@@ -131,3 +131,23 @@ def test_sql_in_a_title_is_stored_as_plain_text(client):
         {"id": 1, "title": "Other", "done": False},
         {"id": 2, "title": updated, "done": True},
     ]
+
+
+def test_title_search_ignores_case(client):
+    client.post("/tasks", json={"title": "Buy MILK"})
+    client.post("/tasks", json={"title": "Buy bread"})
+    assert [task["title"] for task in client.get("/tasks", params={"title": "milk"}).json()] == ["Buy MILK"]
+
+
+def test_title_search_works_with_the_done_filter(client):
+    client.post("/tasks", json={"title": "milk open"})
+    client.post("/tasks", json={"title": "milk done", "done": True})
+    listed = client.get("/tasks", params={"title": "milk", "done": "true"}).json()
+    assert [task["title"] for task in listed] == ["milk done"]
+
+
+def test_title_search_has_no_wildcards(client):
+    client.post("/tasks", json={"title": "100%_sure"})
+    client.post("/tasks", json={"title": "100xysure"})
+    listed = client.get("/tasks", params={"title": "100%_sure"}).json()
+    assert [task["title"] for task in listed] == ["100%_sure"]
