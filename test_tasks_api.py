@@ -78,3 +78,56 @@ def test_unknown_task_is_404(client, method, kwargs):
 def test_a_task_needs_a_title(client, body):
     assert client.post("/tasks", json=body).status_code == 422
     assert client.get("/tasks").json() == []
+
+
+@pytest.mark.parametrize(
+    "query, expected",
+    [
+        ("?done=false", [{"id": 1, "title": "Open", "done": False}]),
+        ("?done=true", [{"id": 2, "title": "Finished", "done": True}]),
+        (
+            "",
+            [
+                {"id": 1, "title": "Open", "done": False},
+                {"id": 2, "title": "Finished", "done": True},
+            ],
+        ),
+    ],
+)
+def test_list_filters_by_done(client, query, expected):
+    client.post("/tasks", json={"title": "Open"})
+    client.post("/tasks", json={"title": "Finished", "done": True})
+
+    listed = client.get(f"/tasks{query}")
+    assert listed.status_code == 200
+    assert listed.json() == expected
+
+
+def test_done_filter_with_no_matches_is_an_empty_list(client):
+    client.post("/tasks", json={"title": "Open"})
+
+    listed = client.get("/tasks?done=true")
+    assert listed.status_code == 200
+    assert listed.json() == []
+
+
+@pytest.mark.parametrize("value", ["maybe", "", "1", "0", "yes", "TRUE", "true' OR '1'='1"])
+def test_invalid_done_filter_is_422(client, value):
+    client.post("/tasks", json={"title": "Open"})
+
+    assert client.get("/tasks", params={"done": value}).status_code == 422
+    assert client.get("/tasks").json() == [{"id": 1, "title": "Open", "done": False}]
+
+
+def test_sql_in_a_title_is_stored_as_plain_text(client):
+    created = "x'); DROP TABLE task; --"
+    client.post("/tasks", json={"title": "Other"})
+    assert client.post("/tasks", json={"title": created}).json()["title"] == created
+    assert client.get("/tasks/2").json()["title"] == created
+
+    updated = "y' WHERE 1=1; DELETE FROM task; --"
+    assert client.put("/tasks/2", json={"title": updated, "done": True}).json()["title"] == updated
+    assert client.get("/tasks").json() == [
+        {"id": 1, "title": "Other", "done": False},
+        {"id": 2, "title": updated, "done": True},
+    ]
