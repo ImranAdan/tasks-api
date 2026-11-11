@@ -9,6 +9,11 @@ on:
 
 permissions: {}
 
+# One decision at a time per PR branch, so an older run can't overwrite a newer
+# comment and two runs can't both create one.
+concurrency:
+  group: mandate-${{ github.event.workflow_run.head_branch }}
+
 jobs:
   decide:
     if: >-
