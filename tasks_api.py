@@ -82,3 +82,11 @@ def delete_task(task_id: int) -> Response:
         if conn.execute("DELETE FROM task WHERE id = ?", (task_id,)).rowcount == 0:
             raise HTTPException(404, "task not found")
     return Response(status_code=204)
+
+
+@app.delete("/tasks", status_code=204)
+def clear_tasks() -> Response:
+    """Delete every task, to start a fresh list."""
+    with database() as conn:
+        conn.execute("DELETE FROM task")
+    return Response(status_code=204)
